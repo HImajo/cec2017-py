@@ -3,9 +3,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from deap import base, creator, tools, algorithms
+import os
 from multiprocessing import get_context
 
-import cec2017.functions as functions
+from cec2017.functions import f4 as f
+os.makedirs("data", exist_ok=True)
 
 # ==== GAの設定 ====
 DIM = 10                 # 二次元
@@ -13,8 +15,6 @@ POP_SIZE = 100           # 個体数
 GENS = 500               # 世代数
 X_MIN, X_MAX = -100, 100  # 探索空間の範囲
 TRIALS = 31
-
-from cec2017.functions import f4 as f
 
 # ==== DEAP セットアップ ====
 creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
@@ -95,14 +95,14 @@ def main():
 
     best_df = pd.concat(best_lists, axis=1)
     best_df["mean_best_so_far"] = best_df.mean(axis=1)
-    best_df.reset_index(drop=True, inplace=True)
-    best_df.to_csv("f4_best_so_far.csv", index=False)
+    best_df.reset_index(drop=True)
+    best_df.to_csv("data/f4_best_so_far.csv", index=False)
 
     df_best = pd.DataFrame([
         {"trial": i+1, "x": ind[0], "y": ind[1], "fitness": val}
         for i, (ind, val) in enumerate(best_individuals)
     ])
-    df_best.to_csv("f4_best_individuals.csv", index=False)
+    df_best.to_csv("data/f4_best_individuals.csv", index=False)
 
 if __name__ == "__main__":
     main()
