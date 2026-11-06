@@ -6,3 +6,5 @@ venv
 build/
 dist/
 CEC2017.egg-info/
+.DS_Store
+**/.DS_Store
