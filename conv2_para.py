@@ -6,12 +6,12 @@ from deap import base, creator, tools, algorithms
 import os
 from multiprocessing import get_context
 
-from cec2017.functions import f4 as f
-FUNCTION_NAME = "f4"
+from cec2017.functions import f10 as f
+FUNCTION_NAME = "f10"
 
 # ==== GAの設定 ====
-DIM = 10                 # 次元数
-POP_SIZE = 100           # 個体数
+DIM = 50                 # 次元数
+POP_SIZE = 50           # 個体数
 GENS = 500               # 世代数
 X_MIN, X_MAX = -100, 100  # 探索空間の範囲
 TRIALS = 31
@@ -231,7 +231,7 @@ def main():
         df_best.to_csv(f"{OUTPUT_DIR}/{OUTPUT_FILE_BEST}_{a}.csv", index=False)
 
         df_generation_best = pd.DataFrame(generation_best_all)
-        df_generation_best.to_csv(f"{OUTPUT_DIR}/{OUTPUT_FILE_GENERATION_BEST}_{a}.csv", index=False)
+        # df_generation_best.to_csv(f"{OUTPUT_DIR}/{OUTPUT_FILE_GENERATION_BEST}_{a}.csv", index=False)
 
 if __name__ == "__main__":
     main()
