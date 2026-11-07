@@ -6,21 +6,22 @@ from deap import base, creator, tools, algorithms
 import os
 from multiprocessing import get_context
 
-from cec2017.functions import f4 as f
+from cec2017.functions import f10 as f
+FUNCTION_NAME = "f10"
 
 # ==== GAの設定 ====
 DIM = 50                 # 次元数
-POP_SIZE = 100           # 個体数
+POP_SIZE = 50           # 個体数
 GENS = 500               # 世代数
 X_MIN, X_MAX = -100, 100  # 探索空間の範囲
 TRIALS = 31
 
 # ==== 出力設定 ====
-OUTPUT_DIR = f"pop{POP_SIZE}/data/f4/var{DIM}"
+OUTPUT_DIR = f"pop{POP_SIZE}/data/{FUNCTION_NAME}/var{DIM}"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-OUTPUT_FILE = os.path.join(OUTPUT_DIR, "f4_best_so_far_helper1.csv")
-OUTPUT_FILE_BEST = os.path.join(OUTPUT_DIR, "f4_best_individuals_helper1.csv")
-OUTPUT_FILE_GENERATION_BEST = os.path.join(OUTPUT_DIR, "f4_generation_best_helper1.csv")
+OUTPUT_FILE = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_best_so_far_helper1.csv")
+OUTPUT_FILE_BEST = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_best_individuals_helper1.csv")
+OUTPUT_FILE_GENERATION_BEST = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_generation_best_helper1.csv")
 
 # --- DEAP設定 ---
 creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0))
@@ -212,7 +213,7 @@ def main():
             "best_fitness": best_fitness[i][1],
             "individual": best_fitness[i][0]
         }
-        for i in range(NUM_TRIALS)
+        for i in range(TRIALS)
     ])
     # df_best.to_csv("data/f4_best_individuals_helper1.csv", index=False)
     df_best.to_csv(OUTPUT_FILE_BEST, index=False)

@@ -7,6 +7,7 @@ import os
 from multiprocessing import get_context
 
 from cec2017.functions import f4 as f
+FUNCTION_NAME = "f4"
 
 # ==== GAの設定 ====
 DIM = 10                 # 次元数
@@ -16,11 +17,11 @@ X_MIN, X_MAX = -100, 100  # 探索空間の範囲
 TRIALS = 31
 
 # ==== 出力設定 ====
-OUTPUT_DIR = f"pop{POP_SIZE}/data/f4/var{DIM}"
+OUTPUT_DIR = f"pop{POP_SIZE}/data/{FUNCTION_NAME}/var{DIM}"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-OUTPUT_FILE =  f"f4_best_so_far_helper2"
-OUTPUT_FILE_BEST = f"f4_best_individuals_helper2"
-OUTPUT_FILE_GENERATION_BEST = f"f4_generation_best_helper2"
+OUTPUT_FILE =  f"{FUNCTION_NAME}_best_so_far_helper2"
+OUTPUT_FILE_BEST = f"{FUNCTION_NAME}_best_individuals_helper2"
+OUTPUT_FILE_GENERATION_BEST = f"{FUNCTION_NAME}_generation_best_helper2"
 
 # --- DEAP設定 ---
 creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0))
@@ -185,7 +186,7 @@ def main():
 
     print(f"Using {n_proc} processes")
 
-    a_LIST = [0.1, 0.2, 0.3, 0.5]
+    a_LIST = [0.1, 0.2]
 
     for a in a_LIST:
         print(f"\n=== Running for helper a = {a} ===")
