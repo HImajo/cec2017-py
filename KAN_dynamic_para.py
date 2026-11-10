@@ -1,13 +1,16 @@
-import os
 import random
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from deap import base, creator, tools, algorithms
+import os
 from multiprocessing import get_context
-
+import time
 import torch
 from kan import KAN
+
+from cec2017.functions import f10 as f
+FUNCTION_NAME = "f10"
 
 # ==== GAの設定 ====
 DIM = 10                 # 次元数
@@ -28,53 +31,34 @@ IMPROVEMENT_THRESHOLD = 1e-6
 MAX_MIN_N_SELECT = 50
 DUPLICATE_TOL = 1e-8
 
+# ==== 出力設定 ====
+OUTPUT_DIR = f"pop{POP_SIZE}/data/{FUNCTION_NAME}/var{DIM}"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+OUTPUT_FILE = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_best_so_far_KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}.csv")
+OUTPUT_FILE_BEST = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_best_individuals_KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}.csv")
+OUTPUT_FILE_GENERATION_BEST = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_generation_best_KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}.csv")
+OUTPUT_FILE_UPDATE = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_update_history_KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}.csv")
+OUTPUT_FILE_TIME = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_trial_time_KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}.csv")
 
-DEVICE = torch.device(
-    "cuda" if torch.cuda.is_available() else "cpu"
-)
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# ==== Rosenbrock 関数（シフト・回転版）定義 ====
-o_4 = np.loadtxt("def/shift_data_4.txt")[:DIM]  # shape: (DIM,)
-M = np.loadtxt("def/M_4_D10.txt")                  # shape: (DIM, DIM)
-
-assert o_4.shape[0] == DIM
-assert M.shape == (DIM, DIM)
-
-F4_star = 400.0
-
-
-def rosenbrock_base(z):
-    return np.sum(
-        100.0 * (z[:-1]**2 - z[1:])**2 +
-        (z[:-1] - 1.0)**2
-    )
-
-def function_shifted_rotated(individual):
-    x = np.array(individual)
-    # (x - o_4)
-    z = x - o_4
-    # 2.048 * (x - o_4) / 100
-    z = 2.048 * z / 100.0
-    # 回転
-    z = M @ z
-    # + 1 ベクトル
-    z = z + 1.0
-    # Rosenbrock
-    return rosenbrock_base(z) + F4_star,
-
-
-
-# ============================================================
-# 4. 各試行のKAN学習
-# ============================================================
-def train_kan(pop, seed):
+def evaluate_target(individual):
     """
-    GAの初期個体群を学習データとしてKANを学習する。
+    個体の真の目的関数値を取得する。
+    fには必ず (1, DIM) の形状で渡す。
+    """
+    x = np.asarray(individual, dtype=float).reshape(1, DIM)
+    return float(f(x)[0])
+
+
+def train_kan(archive, seed):
+    """
+    アーカイブを学習データとしてKANを学習する。
 
     Parameters
     ----------
-    pop : list
-        GAの初期個体群
+    archive : list
+        [[individual, f_value], ...]
     seed : int
         乱数シード
 
@@ -82,34 +66,20 @@ def train_kan(pop, seed):
     -------
     model : KAN
         学習済みモデル
-    X_train : ndarray
+    train_X : ndarray
         学習に使用した個体
-    y_train : ndarray
+    train_y : ndarray
         対応する真の目的関数値
     """
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    # GAの初期個体群をそのまま学習データに使用
-    X_train = np.asarray(pop, dtype=np.float32)
+    # アーカイブから個体と評価値を取り出す
+    X_train = np.asarray([entry[0] for entry in archive], dtype=np.float32).reshape(-1, DIM)
+    y_train = np.asarray([entry[1] for entry in archive], dtype=np.float32).reshape(-1, 1)
 
-    # 各個体の真の目的関数値
-    y_train = np.asarray([
-        float(function_shifted_rotated(x)[0])
-        for x in X_train
-    ], dtype=np.float32).reshape(-1, 1)
-
-    train_input = torch.tensor(
-        X_train,
-        dtype=torch.float32,
-        device=DEVICE
-    )
-
-    train_label = torch.tensor(
-        y_train,
-        dtype=torch.float32,
-        device=DEVICE
-    )
+    train_input = torch.tensor(X_train, dtype=torch.float32, device=DEVICE)
+    train_label = torch.tensor(y_train, dtype=torch.float32, device=DEVICE)
 
     dataset = {
         "train_input": train_input,
@@ -140,44 +110,27 @@ def update_kan(
     model,
     train_X,
     train_y,
-    new_X,
+    new_archive,
     seed
 ):
     """
-    新しい学習データを追加し、既存のKANを追加学習する。
+    新しいアーカイブのデータを追加し、
+    既存のKANを追加学習する。
     """
 
-    if len(new_X) == 0:
+    if len(new_archive) == 0:
         return model, train_X, train_y
 
-    # 新しい個体の真の目的関数値を取得
-    new_y = np.asarray([
-        float(function_shifted_rotated(x)[0])
-        for x in new_X
-    ], dtype=np.float32).reshape(-1, 1)
+    # 新しい個体と目的関数値を取得
+    new_X = np.asarray([entry[0] for entry in new_archive], dtype=np.float32).reshape(-1, DIM)
+    new_y = np.asarray([entry[1] for entry in new_archive], dtype=np.float32).reshape(-1, 1)
 
-    # 学習データを蓄積
-    train_X = np.vstack([
-        train_X,
-        new_X
-    ])
+    # 学習データを追加
+    train_X = np.vstack([train_X, new_X])
+    train_y = np.vstack([train_y, new_y])
 
-    train_y = np.vstack([
-        train_y,
-        new_y
-    ])
-
-    train_input = torch.tensor(
-        train_X,
-        dtype=torch.float32,
-        device=DEVICE
-    )
-
-    train_label = torch.tensor(
-        train_y,
-        dtype=torch.float32,
-        device=DEVICE
-    )
+    train_input = torch.tensor(train_X, dtype=torch.float32, device=DEVICE)
+    train_label = torch.tensor(train_y, dtype=torch.float32, device=DEVICE)
 
     dataset = {
         "train_input": train_input,
@@ -198,101 +151,6 @@ def update_kan(
     return model, train_X, train_y
 
 
-# def max_min_selection(
-#     archive,
-#     train_X,
-#     n_select=50,
-#     duplicate_tol=1e-8
-# ):
-#     """
-#     アーカイブからMax-min selectionで学習候補を選択する。
-
-#     Parameters
-#     ----------
-#     archive : ndarray, shape (n_archive, DIM)
-#         過去に評価した全個体
-#     train_X : ndarray, shape (n_train, DIM)
-#         これまでKANの学習に使用した全個体
-#     n_select : int
-#         選択する個体数
-#     duplicate_tol : float
-#         既存の学習データとの重複判定閾値
-
-#     Returns
-#     -------
-#     selected_X : ndarray, shape (n_select, DIM) 以下
-#         選択された個体
-#     """
-
-#     archive = np.asarray(archive, dtype=float)
-#     train_X = np.asarray(train_X, dtype=float)
-
-#     if len(archive) == 0:
-#         return np.empty((0, DIM))
-
-#     # アーカイブ内の重複個体を除去
-#     candidates = np.unique(archive, axis=0)
-
-#     # すでに学習に使用した個体は候補から除外
-#     remaining = []
-
-#     for x in candidates:
-#         distances = np.linalg.norm(train_X - x, axis=1)
-
-#         if np.all(distances > duplicate_tol):
-#             remaining.append(x)
-
-#     if len(remaining) == 0:
-#         return np.empty((0, DIM))
-
-#     remaining = np.asarray(remaining)
-
-#     # 既存の学習データに対する各候補の最小距離
-#     min_dist = np.empty(len(remaining))
-
-#     for i, x in enumerate(remaining):
-#         min_dist[i] = np.min(
-#             np.linalg.norm(train_X - x, axis=1)
-#         )
-
-#     selected = []
-
-#     n_select = min(n_select, len(remaining))
-
-#     for _ in range(n_select):
-
-#         # 最小距離が最大の候補を選択
-#         idx = int(np.argmax(min_dist))
-
-#         x_new = remaining[idx]
-#         selected.append(x_new)
-
-#         # 選択済み候補を除外
-#         remaining = np.delete(remaining, idx)
-#         min_dist = np.delete(min_dist, idx)
-
-#         if len(remaining) == 0:
-#             break
-
-#         # 新しく選んだ個体からの距離を計算
-#         new_distances = np.linalg.norm(
-#             remaining - x_new,
-#             axis=1
-#         )
-
-#         # 既存の学習データと選択済み個体の両方からの
-#         # 最小距離を更新
-#         min_dist = np.minimum(
-#             min_dist,
-#             new_distances
-#         )
-
-#     if len(selected) == 0:
-#         return np.empty((0, DIM))
-
-#     return np.asarray(selected)
-
-
 def max_min_selection(
     archive,
     train_X,
@@ -304,33 +162,44 @@ def max_min_selection(
 
     Parameters
     ----------
-    archive : ndarray, shape (n_archive, DIM)
-        過去に評価した全個体
-    train_X : ndarray, shape (n_train, DIM)
-        これまでKANの学習に使用した全個体
+    archive : list
+        [[individual, f_value], ...]
+    train_X : ndarray
+        これまでKANの学習に使用した個体
     n_select : int
         選択する個体数
     duplicate_tol : float
-        既存の学習データとの重複判定閾値
+        既存学習データとの重複判定閾値
 
     Returns
     -------
-    selected_X : ndarray, shape (n_selected, DIM)
-        選択された個体
+    selected_archive : list
+        [[individual, f_value], ...]
     """
 
-    archive = np.asarray(archive, dtype=float).reshape(-1, DIM)
+    if len(archive) == 0:
+        return []
+
+    # 個体と評価値を取り出す
+    candidates = np.asarray([entry[0] for entry in archive], dtype=float).reshape(-1, DIM)
+    values = np.asarray([entry[1] for entry in archive], dtype=float)
     train_X = np.asarray(train_X, dtype=float).reshape(-1, DIM)
 
-    # アーカイブが空の場合
-    if len(archive) == 0:
-        return np.empty((0, DIM), dtype=float)
-
     # アーカイブ内の重複個体を除去
-    candidates = np.unique(archive, axis=0)
+    _, unique_indices = np.unique(
+        candidates,
+        axis=0,
+        return_index=True
+    )
 
-    # 既存のKAN学習点と重複する候補を除外
+    unique_indices = np.sort(unique_indices)
+
+    candidates = candidates[unique_indices]
+    values = values[unique_indices]
+
+    # 既存のKAN学習点との重複を除外
     if len(train_X) > 0:
+
         distances = np.linalg.norm(
             candidates[:, None, :] - train_X[None, :, :],
             axis=2
@@ -338,61 +207,70 @@ def max_min_selection(
 
         min_dist_to_train = np.min(distances, axis=1)
 
-        candidates = candidates[
-            min_dist_to_train > duplicate_tol
-        ]
+        valid = min_dist_to_train > duplicate_tol
 
-    # 選択可能な候補がない場合
+        candidates = candidates[valid]
+        values = values[valid]
+
     if len(candidates) == 0:
-        return np.empty((0, DIM), dtype=float)
+        return []
 
-    # 選択数を候補数以下に制限
     n_select = min(n_select, len(candidates))
 
-    # 各候補と既存学習点との最小距離を計算
+    # 既存学習点との最小距離
     if len(train_X) > 0:
+
         distances = np.linalg.norm(
             candidates[:, None, :] - train_X[None, :, :],
             axis=2
         )
+
         min_dist = np.min(distances, axis=1)
+
     else:
-        # 既存学習点がない場合は、最初の候補を選べるようにする
         min_dist = np.full(len(candidates), np.inf)
 
-    # 選択済み候補を管理
     selected_indices = []
     available = np.ones(len(candidates), dtype=bool)
 
     for _ in range(n_select):
 
-        # 選択可能な候補のうち、最小距離が最大の候補を選ぶ
-        scores = np.where(available, min_dist, -np.inf)
+        scores = np.where(
+            available,
+            min_dist,
+            -np.inf
+        )
+
         idx = int(np.argmax(scores))
 
-        # 選択可能な候補が残っていない場合
         if not available[idx]:
             break
 
         selected_indices.append(idx)
         available[idx] = False
 
-        # 今回選択した個体
         x_new = candidates[idx]
 
-        # すべての候補と選択個体との距離を計算
         new_distances = np.linalg.norm(
             candidates - x_new,
             axis=1
         )
 
-        # 各候補について、既存学習点および選択済み個体との
-        # 最小距離を更新
-        min_dist = np.minimum(min_dist, new_distances)
+        min_dist = np.minimum(
+            min_dist,
+            new_distances
+        )
 
-    selected_X = candidates[selected_indices]
+    # 個体と評価値をまとめて返す
+    selected_archive = [
+        [
+            candidates[i].copy(),
+            float(values[i])
+        ]
+        for i in selected_indices
+    ]
 
-    return selected_X
+    return selected_archive
 
 
 # --- DEAP設定 ---
@@ -404,74 +282,39 @@ creator.create("Individual", list, fitness=creator.FitnessMin)
 # ============================================================
 def make_population_toolbox():
     toolbox = base.Toolbox()
-
-    toolbox.register(
-        "attr_float",
-        random.uniform,
-        X_MIN,
-        X_MAX
-    )
-
-    toolbox.register(
-        "individual",
-        tools.initRepeat,
-        creator.Individual,
-        toolbox.attr_float,
-        n=DIM
-    )
-
-    toolbox.register(
-        "population",
-        tools.initRepeat,
-        list,
-        toolbox.individual
-    )
+    toolbox.register("attr_float", random.uniform, X_MIN, X_MAX)
+    toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_float, n=DIM)
+    toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
     return toolbox
 
 
 def make_toolbox(model):
-
     toolbox = base.Toolbox()
-
     toolbox.register("attr_float", random.uniform, X_MIN, X_MAX)
-
     toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_float, n=DIM)
-
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-
     toolbox.register("mate", tools.cxSimulatedBinaryBounded,
                  low=[X_MIN] * DIM, up=[X_MAX] * DIM, eta=20.0)
-
     toolbox.register("mutate", tools.mutPolynomialBounded,
                  low=[X_MIN] * DIM, up=[X_MAX] * DIM,
-                 eta=20.0, indpb=0.2)
-
+                 eta=20.0, indpb=1.0 / DIM)
     toolbox.register("select", tools.selNSGA2)
 
     # KANの予測関数
     def helper_function(individual):
-        x = np.asarray(
-            individual,
-            dtype=np.float32
-        ).reshape(1, DIM)
-
-        x_tensor = torch.as_tensor(
-            x,
-            dtype=torch.float32,
-            device=DEVICE
-        )
+        x = np.asarray(individual, dtype=np.float32).reshape(1, DIM)
+        x_tensor = torch.as_tensor(x, dtype=torch.float32, device=DEVICE)
 
         with torch.no_grad():
             prediction = model(x_tensor)
 
-        return float(
-            prediction.detach().cpu().numpy().reshape(-1)[0]
-        )
+        return float(prediction.detach().cpu().numpy().reshape(-1)[0])
 
     # 2目的関数
     def evaluate(individual):
-        f1 = function_shifted_rotated(individual)[0]
+        x = np.asarray(individual, dtype=float).reshape(1, DIM)
+        f1 = float(f(x)[0])
         f2 = helper_function(individual)
 
         return f1, f2
@@ -480,19 +323,27 @@ def make_toolbox(model):
 
     return toolbox
 
+def select_parents(pop, n):
+    # selTournamentDCDは4個単位で選択する
+    n_main = (n // 4) * 4
+    parents = []
 
-# ============================================================
-# 6. 試行ごとの評価関数
-# ============================================================
+    if n_main > 0:
+        parents.extend(tools.selTournamentDCD(pop, n_main))
+
+    # 4の倍数でない場合、残りを4個選択して必要数だけ使用
+    n_remain = n - n_main
+    if n_remain > 0:
+        parents.extend(tools.selTournamentDCD(pop, 4)[:n_remain])
+
+    return parents
+
+
 def run_single_trial_helper(trial):
 
     seed = trial
-
     print(f"Trial {trial + 1}: start")
 
-    # --------------------------------------------------------
-    # 乱数シードの設定
-    # --------------------------------------------------------
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -504,51 +355,48 @@ def run_single_trial_helper(trial):
     pop = pop_toolbox.population(n=POP_SIZE)
 
     # --------------------------------------------------------
-    # 2. 初期個体群を使ってKANを学習
+    # 2. 初期個体群の評価とアーカイブの作成
+    # --------------------------------------------------------
+    archive = []
+
+    for ind in pop:
+        x = np.asarray(ind, dtype=float).copy()
+        y = evaluate_target(ind)
+
+        archive.append([x, y])
+
+    # --------------------------------------------------------
+    # 3. 初期アーカイブを使ってKANを学習
     # --------------------------------------------------------
     print(f"Trial {trial + 1}: initial KAN training")
 
-    # 初期個体群をそのままKANの学習データとして使用する
     model, train_X, train_y = train_kan(
-        pop=pop,
+        archive=archive,
         seed=seed
     )
 
     # --------------------------------------------------------
-    # 3. 学習済みKANを使うtoolboxを作成
+    # 4. 学習済みKANを使うtoolboxを作成
     # --------------------------------------------------------
     toolbox = make_toolbox(model)
-
-    # --------------------------------------------------------
-    # 4. アーカイブを初期化
-    # --------------------------------------------------------
-    # 初期個体群を、これまでに評価した個体のアーカイブとする
-    archive = [
-        np.asarray(ind, dtype=float).copy()
-        for ind in pop
-    ]
 
     # --------------------------------------------------------
     # 5. 初期個体群を2目的で評価
     # --------------------------------------------------------
     for ind in pop:
         ind.fitness.values = toolbox.evaluate(ind)
+        
 
-    # 初期個体群のターゲット目的関数の最良値
-    best_so_far = min(
-        float(function_shifted_rotated(ind)[0])
-        for ind in pop
-    )
+    best_idx = int(np.argmin([
+        entry[1] for entry in archive
+    ]))
 
-    # 各世代のbest-so-farを保存
+    best_so_far = float(archive[best_idx][1])
+    best_ind = archive[best_idx][0].copy().tolist()
+
+
+    # 各世代のbest-so-far
     best_hist = [best_so_far]
-
-    # 最良個体を記録
-    best_ind = min(
-        pop,
-        key=lambda ind: float(function_shifted_rotated(ind)[0])
-    )
-    best_ind = list(best_ind)
 
     # 停滞世代数
     no_improve = 0
@@ -566,15 +414,16 @@ def run_single_trial_helper(trial):
     # ========================================================
     for gen in range(1, GENS + 1):
 
+        parents = select_parents(pop, POP_SIZE)
+
         # ----------------------------------------------------
         # 7.1 子個体群を生成
         # ----------------------------------------------------
-        offspring = algorithms.varOr(
-            pop,
+        offspring = algorithms.varAnd(
+            parents,
             toolbox,
-            lambda_=POP_SIZE,
-            cxpb=0.7,
-            mutpb=0.2
+            cxpb=0.9,
+            mutpb=1.0
         )
 
         # ----------------------------------------------------
@@ -591,48 +440,40 @@ def run_single_trial_helper(trial):
         # ----------------------------------------------------
         # 7.3 評価済みの子個体をアーカイブに追加
         # ----------------------------------------------------
-        archive.extend(
-            np.asarray(ind, dtype=float).copy()
-            for ind in offspring
-        )
 
-        # ----------------------------------------------------
-        # 7.4 親個体群と子個体群から次世代を選択
-        # ----------------------------------------------------
-        pop = toolbox.select(
-            pop + offspring,
-            POP_SIZE
-        )
+        for ind in offspring:
+            x = np.asarray(ind, dtype=float).copy()
+            y = float(ind.fitness.values[0])
+
+            archive.append([x, y])
+
 
         # ----------------------------------------------------
         # 7.5 ターゲット目的関数の最良値を更新
         # ----------------------------------------------------
-        # アーカイブに含まれる全評価済み個体から求める
-        archive_best_ind = min(
-            archive,
-            key=lambda x: float(function_shifted_rotated(x)[0])
-        )
+        offspring_best_idx = int(np.argmin([
+            ind.fitness.values[0]
+            for ind in offspring
+        ]))
 
-        current_best = float(
-            function_shifted_rotated(archive_best_ind)[0]
-        )
 
-        # best-so-farが十分改善したか判定
+        offspring_best = offspring[offspring_best_idx]
+        current_best = float(offspring_best.fitness.values[0])
+
         if current_best < best_so_far - IMPROVEMENT_THRESHOLD:
 
             best_so_far = current_best
-            best_ind = np.asarray(
-                archive_best_ind,
-                dtype=float
-            ).tolist()
+            best_ind = list(offspring_best)
 
             no_improve = 0
 
         else:
             no_improve += 1
 
-        # この世代のbest-so-farを記録
+        # best-so-farを記録
         best_hist.append(best_so_far)
+
+        pop = toolbox.select(pop + offspring, POP_SIZE)
 
         # ----------------------------------------------------
         # 7.6 停滞時にKANを追加学習
@@ -644,28 +485,22 @@ def run_single_trial_helper(trial):
                 f"stagnation detected. Updating KAN."
             )
 
-            # アーカイブ内の個体から、過去のKAN学習点との
-            # 最小距離が最大になる個体を選択
-            archive_X = np.asarray(
-                archive,
-                dtype=float
-            )
-
-            new_X = max_min_selection(
-                archive=archive_X,
+            # アーカイブからMax-min selectionで新しい学習点を選択
+            new_archive = max_min_selection(
+                archive=archive,
                 train_X=train_X,
                 n_select=MAX_MIN_N_SELECT,
                 duplicate_tol=DUPLICATE_TOL
             )
 
             # 新しい学習点が存在する場合のみKANを更新
-            if len(new_X) > 0:
+            if len(new_archive) > 0:
 
                 model, train_X, train_y = update_kan(
                     model=model,
                     train_X=train_X,
                     train_y=train_y,
-                    new_X=new_X,
+                    new_archive=new_archive,
                     seed=seed + gen
                 )
 
@@ -676,6 +511,8 @@ def run_single_trial_helper(trial):
                 for ind in pop:
                     ind.fitness.values = toolbox.evaluate(ind)
 
+                pop = toolbox.select(pop, POP_SIZE)
+
                 update_gens.append(gen)
 
                 print(
@@ -684,7 +521,6 @@ def run_single_trial_helper(trial):
                     f"Training samples = {len(train_X)}"
                 )
 
-                # 次の停滞判定を開始
                 no_improve = 0
 
             else:
@@ -704,9 +540,7 @@ def run_single_trial_helper(trial):
         "trial": trial,
         "best_so_far": pd.Series(best_hist),
         "best_ind": best_ind,
-        "best_fit": float(
-            function_shifted_rotated(best_ind)[0]
-        ),
+        "best_fit": float(best_so_far),
         "update_gens": update_gens,
         "n_train": len(train_X)
     }
@@ -715,26 +549,35 @@ def run_single_trial_helper(trial):
 
     return result
 
+def run_single_trial_with_time(trial):
+    start_time = time.perf_counter()
+
+    result = run_single_trial_helper(trial)
+
+    end_time = time.perf_counter()
+    elapsed_time = end_time - start_time
+
+    return trial, result, elapsed_time
 
 # ============================================================
 # 7. 並列実行と結果の集約
 # ============================================================
 def main():
 
-    os.makedirs("data", exist_ok=True)
-
     ctx = get_context("spawn")
-
     n_proc = min(TRIALS, ctx.cpu_count())
 
     print(f"Using {n_proc} processes")
     print(f"Total trials: {TRIALS}")
 
     with ctx.Pool(processes=n_proc) as pool:
-        results = pool.map(
-            run_single_trial_helper,
+        trial_results = pool.map(
+            run_single_trial_with_time,
             range(TRIALS)
         )
+
+    results = [r[1] for r in trial_results]
+    execution_times = [r[2] for r in trial_results]
 
     # ========================================================
     # 結果の集約
@@ -762,13 +605,23 @@ def main():
     ]
 
     best_df["mean_best_so_far"] = best_df.mean(axis=1)
-
     best_df.reset_index(drop=True, inplace=True)
+    best_df.to_csv(OUTPUT_FILE, index=False)
 
-    best_df.to_csv(
-        "data/f4_best_so_far_KAN_dynamic.csv",
-        index=False
-    )
+
+    # ========================================================
+    # 各試行の実行時間を保存
+    # ========================================================
+    time_df = pd.DataFrame({
+        "trial": range(TRIALS),
+        "execution_time_sec": execution_times,
+        "execution_time_min": [
+            t / 60 for t in execution_times
+        ]
+    })
+
+    time_df.to_csv(OUTPUT_FILE_TIME, index=False)
+
 
     # --------------------------------------------------------
     # 各試行の最良個体を保存
@@ -782,27 +635,21 @@ def main():
         for i in range(TRIALS)
     ])
 
-    df_best.to_csv(
-        "data/f4_best_individuals_KAN_dynamic.csv",
-        index=False
-    )
+    df_best.to_csv(OUTPUT_FILE_BEST, index=False)
 
     # --------------------------------------------------------
     # KANの更新履歴を保存
     # --------------------------------------------------------
     df_updates = pd.DataFrame([
         {
-            "trial": r["trial"] + 1,
+            "trial": r["trial"],
             "update_gens": r["update_gens"],
             "n_train": r["n_train"]
         }
         for r in results
     ])
 
-    df_updates.to_csv(
-        "data/f4_KAN_update_history.csv",
-        index=False
-    )
+    df_updates.to_csv(OUTPUT_FILE_UPDATE, index=False)
 
     print("All trials finished.")
     print("Results saved.")

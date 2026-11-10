@@ -221,7 +221,7 @@ def main():
     df_generation_best = pd.DataFrame(generation_best_all)
 
     # df_generation_best.to_csv("data/f4_generation_best_helper1.csv", index=False)
-    df_generation_best.to_csv(OUTPUT_FILE_GENERATION_BEST, index=False)
+    # df_generation_best.to_csv(OUTPUT_FILE_GENERATION_BEST, index=False)
 
 if __name__ == "__main__":
     main()
