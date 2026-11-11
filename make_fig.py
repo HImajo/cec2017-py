@@ -2,7 +2,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 
-
 plt.rcParams['pdf.fonttype'] = 42
 plt.rcParams['ps.fonttype'] = 42
 plt.rcParams.update({
@@ -14,14 +13,14 @@ plt.rcParams.update({
     "font.family": "Times New Roman"  # フォントをTimes New Romanに設定
 })
 
-FUNCTION_NAME = "f10"
-DIM = 30
+FUNCTION_NAME = "f4"
+DIM = 50
 POP_SIZE = 50
 KAN_WIDTH = [DIM, 1]
 PATIENCE = 20
 
-BOTTOM = 1000
-TOP = 10000
+BOTTOM = 400
+TOP = 5000
 
 INPUT_DIR = f"pop{POP_SIZE}/data/{FUNCTION_NAME}/var{DIM}"
 OUTPUT_DIR = f"pop{POP_SIZE}/fig/{FUNCTION_NAME}/var{DIM}"
