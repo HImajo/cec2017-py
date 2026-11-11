@@ -96,35 +96,3 @@ plot_convergence(
     filename=OUTPUT_FILE
 )
 
-# CSVの読み込み
-# df = pd.read_csv("data/f10_best_so_far.csv")
-# df_p = pd.read_csv("data/f10_best_so_far_helper.csv")
-
-# # 試行ごとのデータ（最後の列を除く）
-# best_df = df.iloc[:, :-1]
-# best_df_p = df_p.iloc[:, :-1]
-
-# # 各世代での平均と標準偏差
-# mean = best_df.mean(axis=1)
-# std = best_df.std(axis=1)
-# mean_p = best_df_p.mean(axis=1)
-# std_p = best_df_p.std(axis=1)
-
-# # 世代の番号（0から）
-# generations = range(len(mean_h0))
-
-# plt.figure(figsize=(8, 6))
-# plt.plot(generations, mean_h2_1, label="0.1")
-# plt.fill_between(generations, mean_h2_1 - std_h2_1, mean_h2_1 + std_h2_1, alpha=0.2)
-# plt.plot(generations, mean_h2_2, label="0.2")
-# plt.fill_between(generations, mean_h2_2 - std_h2_2, mean_h2_2 + std_h2_2, alpha=0.2)
-# plt.xlabel("Generation")
-# plt.ylabel("Mean of best fitness")
-# plt.legend()
-# plt.grid(True)
-# plt.xlim(0,500)
-# # plt.ylim(bottom=900, top=1000)
-# plt.tight_layout()
-# plt.savefig("fig/f10_var30_conv2.pdf", format='pdf')
-# plt.show()
-

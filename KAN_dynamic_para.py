@@ -9,11 +9,11 @@ import time
 import torch
 from kan import KAN
 
-from cec2017.functions import f9 as f
-FUNCTION_NAME = "f9"
+from cec2017.functions import f5 as f
+FUNCTION_NAME = "f5"
 
 # ==== GAの設定 ====
-DIM = 30                 # 次元数
+DIM = 50                 # 次元数
 POP_SIZE = 50           # 個体数
 GENS = 500               # 世代数
 X_MIN, X_MAX = -100, 100  # 探索空間の範囲
@@ -140,11 +140,7 @@ def update_kan(
     }
 
     # 既存モデルのパラメータを引き継いで追加学習
-    model.fit(
-        dataset,
-        opt="LBFGS",
-        steps=KAN_STEPS
-    )
+    model.fit(dataset, opt="LBFGS", steps=KAN_STEPS)
 
     model.eval()
 

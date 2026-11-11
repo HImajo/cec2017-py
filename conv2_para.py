@@ -5,6 +5,7 @@ import pandas as pd
 from deap import base, creator, tools, algorithms
 import os
 from multiprocessing import get_context
+import time
 
 from cec2017.functions import f10 as f
 FUNCTION_NAME = "f10"
@@ -22,6 +23,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 OUTPUT_FILE =  f"{FUNCTION_NAME}_best_so_far_helper2"
 OUTPUT_FILE_BEST = f"{FUNCTION_NAME}_best_individuals_helper2"
 OUTPUT_FILE_GENERATION_BEST = f"{FUNCTION_NAME}_generation_best_helper2"
+OUTPUT_FILE_TIME = f"{FUNCTION_NAME}_trial_time_helper2"
 
 # --- DEAP設定 ---
 creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0))
@@ -130,7 +132,8 @@ def run_single_trial_helper(args):
 
         # ---- 進化操作 ----
         offspring = algorithms.varAnd(
-            pop, toolbox,
+            parents, 
+            toolbox,
             cxpb=0.9,
             mutpb=1.0
         )
@@ -180,6 +183,17 @@ def run_single_trial_helper(args):
         "generation_best": generation_best
     }
 
+def run_single_trial_with_time(args):
+    a, trial = args
+    start_time = time.perf_counter()
+
+    result = run_single_trial_helper((a, trial))
+
+    end_time = time.perf_counter()
+    elapsed_time = end_time - start_time
+
+    return trial, result, elapsed_time
+
 def main():
     ctx = get_context("spawn")   # MacOS 必須
     n_proc = max(1, ctx.cpu_count())
@@ -192,10 +206,13 @@ def main():
         print(f"\n=== Running for helper a = {a} ===")
 
         with ctx.Pool(processes=n_proc) as pool:
-            results = pool.map(
-                run_single_trial_helper,
+            trial_results = pool.map(
+                run_single_trial_with_time,
                 [(a, trial) for trial in range(TRIALS)]
             )
+
+        results = [r[1] for r in trial_results]
+        execution_times = [r[2] for r in trial_results]
 
         # ===== 結果の集約 =====
         best_lists = []
@@ -219,6 +236,16 @@ def main():
         best_df["mean_best_so_far"] = best_df.mean(axis=1)
         best_df.reset_index(drop=True)
         best_df.to_csv(f"{OUTPUT_DIR}/{OUTPUT_FILE}_{a}.csv", index=False)
+
+        time_df = pd.DataFrame({
+            "trial": range(TRIALS),
+            "execution_time_sec": execution_times,
+            "execution_time_min": [
+                t / 60 for t in execution_times
+            ]
+        })
+    
+        time_df.to_csv(f"{OUTPUT_DIR}/{OUTPUT_FILE_TIME}_{a}.csv", index=False)
 
         df_best = pd.DataFrame([
             {
