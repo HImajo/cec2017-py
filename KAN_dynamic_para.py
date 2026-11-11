@@ -9,11 +9,11 @@ import time
 import torch
 from kan import KAN
 
-from cec2017.functions import f10 as f
-FUNCTION_NAME = "f10"
+from cec2017.functions import f9 as f
+FUNCTION_NAME = "f9"
 
 # ==== GAの設定 ====
-DIM = 10                 # 次元数
+DIM = 30                 # 次元数
 POP_SIZE = 50           # 個体数
 GENS = 500               # 世代数
 X_MIN, X_MAX = -100, 100  # 探索空間の範囲
@@ -565,7 +565,8 @@ def run_single_trial_with_time(trial):
 def main():
 
     ctx = get_context("spawn")
-    n_proc = min(TRIALS, ctx.cpu_count())
+    # n_proc = min(TRIALS, ctx.cpu_count())
+    n_proc = 4
 
     print(f"Using {n_proc} processes")
     print(f"Total trials: {TRIALS}")
