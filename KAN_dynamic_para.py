@@ -9,8 +9,8 @@ import time
 import torch
 from kan import KAN
 
-from cec2017.functions import f4 as f
-FUNCTION_NAME = "f4"
+from cec2017.functions import f9 as f
+FUNCTION_NAME = "f9"
 
 # ==== GAの設定 ====
 DIM = 10                 # 次元数
@@ -42,7 +42,7 @@ OUTPUT_FILE_UPDATE = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_update_history_K
 OUTPUT_FILE_TIME = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_trial_time_KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}.csv")
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-MULTI_NUM = 8
+MULTI_NUM = 6
 
 def evaluate_target(individual):
     """
