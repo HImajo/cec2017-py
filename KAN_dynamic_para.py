@@ -9,11 +9,11 @@ import time
 import torch
 from kan import KAN
 
-from cec2017.functions import f5 as f
-FUNCTION_NAME = "f5"
+from cec2017.functions import f4 as f
+FUNCTION_NAME = "f4"
 
 # ==== GAの設定 ====
-DIM = 50                 # 次元数
+DIM = 10                 # 次元数
 POP_SIZE = 50           # 個体数
 GENS = 500               # 世代数
 X_MIN, X_MAX = -100, 100  # 探索空間の範囲
@@ -26,13 +26,14 @@ KAN_STEPS = 50
 KAN_N_TRAIN = 50
 
 # ==== 停滞判定の設定 ====
-PATIENCE = 20
+PATIENCE = 10
 IMPROVEMENT_THRESHOLD = 1e-6
 MAX_MIN_N_SELECT = 50
 DUPLICATE_TOL = 1e-8
 
 # ==== 出力設定 ====
 OUTPUT_DIR = f"pop{POP_SIZE}/data/{FUNCTION_NAME}/var{DIM}"
+OUTPUT_MODEL = f"pop{POP_SIZE}/model/{FUNCTION_NAME}/var{DIM}"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_best_so_far_KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}.csv")
 OUTPUT_FILE_BEST = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_best_individuals_KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}.csv")
@@ -41,6 +42,7 @@ OUTPUT_FILE_UPDATE = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_update_history_K
 OUTPUT_FILE_TIME = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_trial_time_KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}.csv")
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+MULTI_NUM = 8
 
 def evaluate_target(individual):
     """
@@ -93,6 +95,7 @@ def train_kan(archive, seed):
         grid=KAN_GRID,
         seed=seed,
         device=DEVICE
+        # folder=f"{OUTPUT_MODEL}/trial{seed}"
     )
 
     model.fit(
@@ -562,7 +565,7 @@ def main():
 
     ctx = get_context("spawn")
     # n_proc = min(TRIALS, ctx.cpu_count())
-    n_proc = 4
+    n_proc = min(TRIALS, MULTI_NUM)
 
     print(f"Using {n_proc} processes")
     print(f"Total trials: {TRIALS}")

@@ -5,6 +5,7 @@ import pandas as pd
 from deap import base, creator, tools, algorithms
 import os
 from multiprocessing import get_context
+import time
 
 from cec2017.functions import f10 as f
 FUNCTION_NAME = "f10"
@@ -22,6 +23,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_best_so_far_helper1.csv")
 OUTPUT_FILE_BEST = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_best_individuals_helper1.csv")
 OUTPUT_FILE_GENERATION_BEST = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_generation_best_helper1.csv")
+OUTPUT_FILE_TIME = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_trial_time_helper1.csv")
 
 # --- DEAP設定 ---
 creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0))
@@ -171,6 +173,15 @@ def run_single_trial_helper(trial):
         "generation_best": generation_best
     }
 
+def run_single_trial_with_time(trial):
+    start_time = time.perf_counter()
+
+    result = run_single_trial_helper(trial)
+
+    end_time = time.perf_counter()
+    elapsed_time = end_time - start_time
+
+    return trial, result, elapsed_time
 
 def main():
     ctx = get_context("spawn")   # MacOS 必須
@@ -179,7 +190,10 @@ def main():
     print(f"Using {n_proc} processes")
 
     with ctx.Pool(processes=n_proc) as pool:
-        results = pool.map(run_single_trial_helper, range(TRIALS))
+        trial_results = pool.map(run_single_trial_with_time, range(TRIALS))
+
+    results = [r[1] for r in trial_results]
+    execution_times = [r[2] for r in trial_results]
 
     # ======================
     # 結果の集約
@@ -204,8 +218,17 @@ def main():
     best_df = pd.concat(best_lists, axis=1)
     best_df["mean_best_so_far"] = best_df.mean(axis=1)
     best_df.reset_index(drop=True)
-    # best_df.to_csv("data/f4_best_so_far_helper1.csv", index=False)
     best_df.to_csv(OUTPUT_FILE, index=False)
+
+    time_df = pd.DataFrame({
+        "trial": range(TRIALS),
+        "execution_time_sec": execution_times,
+        "execution_time_min": [
+            t / 60 for t in execution_times
+        ]
+    })
+
+    time_df.to_csv(OUTPUT_FILE_TIME, index=False)
 
     df_best = pd.DataFrame([
         {
@@ -215,12 +238,9 @@ def main():
         }
         for i in range(TRIALS)
     ])
-    # df_best.to_csv("data/f4_best_individuals_helper1.csv", index=False)
     df_best.to_csv(OUTPUT_FILE_BEST, index=False)
 
     df_generation_best = pd.DataFrame(generation_best_all)
-
-    # df_generation_best.to_csv("data/f4_generation_best_helper1.csv", index=False)
     # df_generation_best.to_csv(OUTPUT_FILE_GENERATION_BEST, index=False)
 
 if __name__ == "__main__":

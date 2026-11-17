@@ -13,14 +13,14 @@ plt.rcParams.update({
     "font.family": "Times New Roman"  # フォントをTimes New Romanに設定
 })
 
-FUNCTION_NAME = "f4"
-DIM = 50
+FUNCTION_NAME = "f10"
+DIM = 10
 POP_SIZE = 50
 KAN_WIDTH = [DIM, 1]
 PATIENCE = 20
 
-BOTTOM = 400
-TOP = 5000
+BOTTOM = 1000
+TOP = 2000
 
 INPUT_DIR = f"pop{POP_SIZE}/data/{FUNCTION_NAME}/var{DIM}"
 OUTPUT_DIR = f"pop{POP_SIZE}/fig/{FUNCTION_NAME}/var{DIM}"
@@ -32,6 +32,8 @@ files = [
     ("helper1", "1/f(x)"),
     ("helper2_0.1", "f(x)+ε"),
     (f"KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}", "Dynamic KAN"),
+    # (f"KAN_dynamic_[10, 21, 1]_p{PATIENCE}", "Dynamic KAN2"),
+    # ("helper0", "f(x)"),
 ]
 
 def calc_mean_std(file):
@@ -77,21 +79,11 @@ def plot_convergence(results, filename):
     plt.show()
     plt.close()
 
-
-files = [
-    ("helper1", "1/f(x)"),
-    ("helper2_0.1", "f(x)+ε"),
-    (f"KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}", "Dynamic KAN"),
-]
-
 results = []
 
 for file, label in files:
     mean, std = calc_mean_std(file)
     results.append((mean, std, label))
 
-plot_convergence(
-    results,
-    filename=OUTPUT_FILE
-)
+plot_convergence(results, filename=OUTPUT_FILE)
 
