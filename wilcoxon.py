@@ -3,7 +3,7 @@ import numpy as np
 import os
 from scipy.stats import wilcoxon
 
-FUNCTION_NAME = "f4"
+FUNCTION_NAME = "f10"
 DIM = 10
 POP_SIZE = 50
 KAN_WIDTH = [DIM, 1]
@@ -15,6 +15,8 @@ conditions = [
     ("helper1", "1/f(x)"),
     ("helper2_0.1", "f(x)+ε"),
     (f"KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}", "Dynamic KAN"),
+    (f"KAN_dynamic_{KAN_WIDTH}_p10", "Dynamic KAN (p=10)"),
+    (f"KAN_dynamic_[10, 21, 1]_p{PATIENCE}", "Dynamic KAN2"),
 ]
 
 baseline = "Dynamic KAN"
