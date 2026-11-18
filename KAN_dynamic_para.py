@@ -9,11 +9,12 @@ import time
 import torch
 from kan import KAN
 
-from cec2017.functions import f4 as f
-FUNCTION_NAME = "f4"
+from cec2017.functions import f5 as f
+FUNCTION_NAME = "f5"
+MULTI_NUM = 6
 
 # ==== GAの設定 ====
-DIM = 10                 # 次元数
+DIM = 30                 # 次元数
 POP_SIZE = 50           # 個体数
 GENS = 500               # 世代数
 X_MIN, X_MAX = -100, 100  # 探索空間の範囲
@@ -21,7 +22,7 @@ TRIALS = 31
 
 # ==== KANの設定 ====
 KAN_GRID = 3
-KAN_WIDTH = [DIM, 2*DIM+1, 1]
+KAN_WIDTH = [DIM, 1]
 KAN_STEPS = 50
 KAN_N_TRAIN = 50
 
@@ -33,16 +34,16 @@ DUPLICATE_TOL = 1e-8
 
 # ==== 出力設定 ====
 OUTPUT_DIR = f"pop{POP_SIZE}/data/{FUNCTION_NAME}/var{DIM}"
-OUTPUT_MODEL = f"pop{POP_SIZE}/model/{FUNCTION_NAME}/var{DIM}"
+OUTPUT_MODEL = f"pop{POP_SIZE}/model/{FUNCTION_NAME}/var{DIM}/{KAN_WIDTH}_p{PATIENCE}_g{KAN_GRID}"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-OUTPUT_FILE = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_best_so_far_KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}.csv")
-OUTPUT_FILE_BEST = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_best_individuals_KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}.csv")
-OUTPUT_FILE_GENERATION_BEST = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_generation_best_KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}.csv")
-OUTPUT_FILE_UPDATE = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_update_history_KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}.csv")
-OUTPUT_FILE_TIME = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_trial_time_KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}.csv")
+os.makedirs(OUTPUT_MODEL, exist_ok=True)
+OUTPUT_FILE = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_best_so_far_KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}_g{KAN_GRID}.csv")
+OUTPUT_FILE_BEST = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_best_individuals_KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}_g{KAN_GRID}.csv")
+OUTPUT_FILE_GENERATION_BEST = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_generation_best_KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}_g{KAN_GRID}.csv")
+OUTPUT_FILE_UPDATE = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_update_history_KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}_g{KAN_GRID}.csv")
+OUTPUT_FILE_TIME = os.path.join(OUTPUT_DIR, f"{FUNCTION_NAME}_trial_time_KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}_g{KAN_GRID}.csv")
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-MULTI_NUM = 6
 
 def evaluate_target(individual):
     """
@@ -90,12 +91,19 @@ def train_kan(archive, seed):
         "test_label": train_label,
     }
 
+    model_folder = os.path.join(
+        OUTPUT_MODEL,
+        f"trial{seed}"
+    )
+
+    os.makedirs(model_folder, exist_ok=True)
+
     model = KAN(
         width=KAN_WIDTH,
         grid=KAN_GRID,
         seed=seed,
-        device=DEVICE
-        # folder=f"{OUTPUT_MODEL}/trial{seed}"
+        device=DEVICE,
+        ckpt_path=model_folder
     )
 
     model.fit(
