@@ -4,19 +4,21 @@ import os
 from scipy.stats import wilcoxon
 
 FUNCTION_NAME = "f10"
-DIM = 10
+DIM = 30
 POP_SIZE = 50
 KAN_WIDTH = [DIM, 1]
-PATIENCE = 20
+PATIENCE = 10
+GRID = 3
 
 INPUT_DIR = f"pop{POP_SIZE}/data/{FUNCTION_NAME}/var{DIM}"
 
 conditions = [
     ("helper1", "1/f(x)"),
     ("helper2_0.1", "f(x)+ε"),
-    (f"KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}", "Dynamic KAN"),
-    (f"KAN_dynamic_{KAN_WIDTH}_p10", "Dynamic KAN (p=10)"),
-    (f"KAN_dynamic_[10, 21, 1]_p{PATIENCE}", "Dynamic KAN2"),
+    (f"KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}_g{GRID}", "Dynamic KAN"),
+    (f"KAN_dynamic_{KAN_WIDTH}_p20_g{GRID}", "Dynamic KAN (p=20)"),
+    # (f"KAN_dynamic_[10, 21, 1]_p{PATIENCE}_g{GRID}", "Dynamic KAN2"),
+    # (f"KAN_static_{KAN_WIDTH}_g{GRID}", "Static KAN"),
 ]
 
 baseline = "Dynamic KAN"

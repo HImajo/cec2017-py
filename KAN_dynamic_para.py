@@ -9,8 +9,8 @@ import time
 import torch
 from kan import KAN
 
-from cec2017.functions import f5 as f
-FUNCTION_NAME = "f5"
+from cec2017.functions import f10 as f
+FUNCTION_NAME = "f10"
 MULTI_NUM = 6
 
 # ==== GAの設定 ====
