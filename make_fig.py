@@ -13,14 +13,15 @@ plt.rcParams.update({
     "font.family": "Times New Roman"  # フォントをTimes New Romanに設定
 })
 
-FUNCTION_NAME = "f10"
+FUNCTION_NAME = "f4"
 DIM = 10
 POP_SIZE = 50
 KAN_WIDTH = [DIM, 1]
-PATIENCE = 20
+PATIENCE = 10
+GRID = 3
 
-BOTTOM = 1000
-TOP = 2000
+BOTTOM = 400
+TOP = 500
 
 INPUT_DIR = f"pop{POP_SIZE}/data/{FUNCTION_NAME}/var{DIM}"
 OUTPUT_DIR = f"pop{POP_SIZE}/fig/{FUNCTION_NAME}/var{DIM}"
@@ -31,7 +32,9 @@ OUTPUT_FILE = f"{FUNCTION_NAME}_var{DIM}_diffh.pdf"
 files = [
     ("helper1", "1/f(x)"),
     ("helper2_0.1", "f(x)+ε"),
-    (f"KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}", "Dynamic KAN"),
+    (f"KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}_g{GRID}", "D-KANs"),
+    (f"KAN_static_{KAN_WIDTH}_g{GRID}", "S-KANs"),
+
     # (f"KAN_dynamic_[10, 21, 1]_p{PATIENCE}", "Dynamic KAN2"),
     # ("helper0", "f(x)"),
 ]

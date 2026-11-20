@@ -14,7 +14,7 @@ FUNCTION_NAME = "f10"
 MULTI_NUM = 6
 
 # ==== GAの設定 ====
-DIM = 30                 # 次元数
+DIM = 50                 # 次元数
 POP_SIZE = 50           # 個体数
 GENS = 500               # 世代数
 X_MIN, X_MAX = -100, 100  # 探索空間の範囲

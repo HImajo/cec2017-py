@@ -9,12 +9,12 @@ import time
 import torch
 from kan import KAN
 
-from cec2017.functions import f10 as f
-FUNCTION_NAME = "f10"
+from cec2017.functions import f4 as f
+FUNCTION_NAME = "f4"
 MULTI_NUM = 7
 
 # ==== GAの設定 ====
-DIM = 30                 # 次元数
+DIM = 50                 # 次元数
 POP_SIZE = 50           # 個体数
 GENS = 500               # 世代数
 X_MIN, X_MAX = -100, 100  # 探索空間の範囲
