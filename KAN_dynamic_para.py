@@ -14,7 +14,7 @@ FUNCTION_NAME = "f10"
 MULTI_NUM = 6
 
 # ==== GAの設定 ====
-DIM = 50                 # 次元数
+DIM = 10                 # 次元数
 POP_SIZE = 50           # 個体数
 GENS = 500               # 世代数
 X_MIN, X_MAX = -100, 100  # 探索空間の範囲
@@ -22,7 +22,7 @@ TRIALS = 31
 
 # ==== KANの設定 ====
 KAN_GRID = 3
-KAN_WIDTH = [DIM, 1]
+KAN_WIDTH = [DIM, 2*DIM+1, 1]
 KAN_STEPS = 50
 KAN_N_TRAIN = 50
 
