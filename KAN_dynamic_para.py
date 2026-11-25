@@ -9,8 +9,8 @@ import time
 import torch
 from kan import KAN
 
-from cec2017.functions import f10 as f
-FUNCTION_NAME = "f10"
+from cec2017.functions import f9 as f
+FUNCTION_NAME = "f9"
 MULTI_NUM = 6
 
 # ==== GAの設定 ====
@@ -22,12 +22,12 @@ TRIALS = 31
 
 # ==== KANの設定 ====
 KAN_GRID = 3
-KAN_WIDTH = [DIM, 2*DIM+1, 1]
+KAN_WIDTH = [DIM, 1]
 KAN_STEPS = 50
 KAN_N_TRAIN = 50
 
 # ==== 停滞判定の設定 ====
-PATIENCE = 10
+PATIENCE = 50
 IMPROVEMENT_THRESHOLD = 1e-6
 MAX_MIN_N_SELECT = 50
 DUPLICATE_TOL = 1e-8
