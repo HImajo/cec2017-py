@@ -13,27 +13,30 @@ plt.rcParams.update({
     "font.family": "Times New Roman"  # フォントをTimes New Romanに設定
 })
 
-FUNCTION_NAME = "f4"
+FUNCTION_NAME = "f10"
 DIM = 10
 POP_SIZE = 50
 KAN_WIDTH = [DIM, 1]
 PATIENCE = 10
 GRID = 3
 
-BOTTOM = 400
-TOP = 500
+BOTTOM = 1000
+TOP = 2000
 
 INPUT_DIR = f"pop{POP_SIZE}/data/{FUNCTION_NAME}/var{DIM}"
 OUTPUT_DIR = f"pop{POP_SIZE}/fig/{FUNCTION_NAME}/var{DIM}"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-OUTPUT_FILE = f"{FUNCTION_NAME}_var{DIM}_diffh.pdf"
+OUTPUT_FILE = f"{FUNCTION_NAME}_var{DIM}_change_w.pdf"
 
 files = [
-    ("helper1", "1/f(x)"),
-    ("helper2_0.1", "f(x)+ε"),
-    (f"KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}_g{GRID}", "D-KANs"),
-    (f"KAN_static_{KAN_WIDTH}_g{GRID}", "S-KANs"),
+    # ("helper1", "1/f(x)"),
+    # ("helper2_0.1", "f(x)+ε"),
+    (f"KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}_g{GRID}", "D-KANs([10, 1])"),
+    (f"KAN_dynamic_[{DIM}, {2*DIM+1}, 1]_p{PATIENCE}_g{GRID}", "D-KANs([10, 21, 1])"),
+    # (f"KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}_g5", "D-KANs(grid=5)"),
+    # (f"KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}_g10", "D-KANs(grid=10)"),
+    # (f"KAN_static_{KAN_WIDTH}_g{GRID}", "S-KANs"),
 
     # (f"KAN_dynamic_[10, 21, 1]_p{PATIENCE}", "Dynamic KAN2"),
     # ("helper0", "f(x)"),

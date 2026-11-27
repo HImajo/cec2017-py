@@ -3,7 +3,7 @@ import numpy as np
 import os
 from scipy.stats import wilcoxon
 
-FUNCTION_NAME = "f10"
+FUNCTION_NAME = "f7"
 DIM = 10
 POP_SIZE = 50
 KAN_WIDTH = [DIM, 1]
@@ -15,14 +15,16 @@ INPUT_DIR = f"pop{POP_SIZE}/data/{FUNCTION_NAME}/var{DIM}"
 conditions = [
     # ("helper1", "1/f(x)"),
     # ("helper2_0.1", "f(x)+ε"),
-    (f"KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}_g{GRID}", "Dynamic KAN"),
+    (f"KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}_g{GRID}", "D-KANs"),
     (f"KAN_dynamic_{KAN_WIDTH}_p20_g{GRID}", "p=20"),
     (f"KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}_g5", "g=5"),
+    (f"KAN_dynamic_{KAN_WIDTH}_p{PATIENCE}_g10", "g=10"),
+    (f"KAN_dynamic_[10, 21, 1]_p{PATIENCE}_g{GRID}", "[10, 21, 1]"),
     # (f"KAN_dynamic_[10, 21, 1]_p{PATIENCE}_g{GRID}", "width=[10,21,1]"),
     # (f"KAN_static_{KAN_WIDTH}_g{GRID}", "Static KAN"),
 ]
 
-baseline = "Dynamic KAN"
+baseline = "D-KANs"
 
 
 def load_final_values(file):
@@ -115,35 +117,3 @@ for file, label in conditions[0:]:
         )
 
 
-
-# CSVの読み込み
-# df_conv1 = pd.read_csv(f"{INPUT_DIR}/f4_best_so_far_helper.csv")
-# df_conv2 = pd.read_csv(f"{INPUT_DIR}/f4_best_so_far_helper2_0.1.csv")
-# seed_cols = [c for c in df_ga.columns if c != "mean_best_so_far"]
-
-# conv1_final = df_conv1.iloc[-1][seed_cols].astype(float).values
-# conv2_final = df_conv2.iloc[-1][seed_cols].astype(float).values
-
-
-# stat, p_value = wilcoxon(dynamic_final, ga_final, alternative="less")
-# print("Wilcoxon signed-rank test片側検定 (KAN < GA)")
-# # print(f"Statistic = {stat}")
-# print(f"p-value   = {p_value}")
-
-# def median_iqr(x):
-#     median = np.median(x)
-#     q1 = np.percentile(x, 25)
-#     q3 = np.percentile(x, 75)
-#     return median, q1, q3
-
-# def mean_std(x):
-#     mean = np.mean(x)
-#     std = np.std(x)
-#     return mean, std
-
-# conv1_mean, conv1_std = mean_std(conv1_final)
-# conv2_mean, conv2_std = mean_std(conv2_final)
-
-# print("\nFinal generation statistics:")
-# print(f"{conv1_mean:.4f}|{conv1_std:.4f}")
-# print(f"{conv2_mean:.4f}|{conv2_std:.4f}")
